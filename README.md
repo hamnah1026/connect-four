@@ -21,3 +21,7 @@ Save the game code as `connect4_gui.py` (or any filename you prefer), then run i
 
 ```bash
 python connect4_gui.py
+```
+
+https://github.com/user-attachments/assets/1655039b-ee18-4e9b-b30b-a2f5ea4ebf2a
+
