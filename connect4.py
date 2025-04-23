@@ -1,125 +1,135 @@
-# Function for getting input
-def get_input():
-  while True:
-    try:
-        column = int(input('Enter Column from 0 -6 : '))
-        if column in range(7):
-          return column
-          break
-    except:
-        pass
-    print ('\nIncorrect input, try again')
+import tkinter as tk  # Import the tkinter library for GUI development
 
-#
+class Game:
+    def __init__(self):
+        # Class attributes for keeping track of game state
+        self.row = 0
+        self.col = 0
+        self.turn_no = 0  # Number of turns taken
+        self.current_player = "white"  # Will toggle between "red" and "yellow"
 
+        # GUI setup
+        self.root = tk.Tk()
+        self.root.geometry("900x700")
+        self.root.title("Connect Four")
 
+        # Create the canvas where the game board will be drawn
+        self.canvas = tk.Canvas(self.root, bg='white', height=700, width=900)
+        self.canvas.pack()
 
-# Board formation
-print("WELCOME TO CONNECT 4 !!!!")
+        # Draw the blue rectangle background for the board
+        rect = self.canvas.create_rectangle((50, 20, 850, 680), fill='blue')
+        self.canvas.pack()
 
-board = [[' ' for i in range(7)] for j in range(6)]
-print(*list(range(7)), sep='   ')
-for i in range(6):
-  print(*board[i], sep=' | ')
-  print(' - ' * 9)
-print(*list(range(7)), sep='   ')
+        # Initialize 6x7 grid of None to store references to circle (oval) items
+        self.grid_ids = [[None for _ in range(7)] for _ in range(6)]
+        cell_size = 100  # Size of each cell
 
+        # Create and place white circles to represent empty slots
+        for row in range(6):
+            for col in range(7):
+                x1 = col * cell_size + 100
+                y1 = row * cell_size + 50
+                x2 = x1 + cell_size
+                y2 = y1 + cell_size
 
-game_over = False
+                # Create circle and tag it with its cell position
+                circle_id = self.canvas.create_oval((x1 + 10, y1 + 10, x2 - 10, y2 - 10), 
+                                                    fill="white", outline="blue", 
+                                                    tag=f"cell{row}_{col}")
+                self.grid_ids[row][col] = circle_id
 
-# Players
-player_one = str(input("Enter Name of Player 1 : "))
-player_two = str(input("Enter Name of Player 2 : "))
+                # Bind a click event to each circle that triggers a move
+                self.canvas.tag_bind(f"cell{row}_{col}", "<Button-1>", lambda e, c=col: self.makeMove(c))
+        
+        self.canvas.pack()
+        self.root.mainloop()  # Start the GUI event loop
 
-turn_no = 0
-while turn_no < 42 :
+    def makeMove(self, col):
+        # Store the selected column
+        self.col = col
 
-  # Which player's turn
-  if turn_no % 2 == 0:
-    symbol, current_player = 'O', player_one
-  else:
-    symbol, current_player = 'Z', player_two
-  print(current_player,'play',symbol)
+        # Determine which player's turn it is
+        if self.turn_no % 2 == 0:
+            self.current_player = "red"
+        else:
+            self.current_player = "yellow"
+        # Place the piece in the lowest available row in the selected column
+        for i in range(5, -1, -1):
+            if self.canvas.itemcget(self.grid_ids[i][col], "fill") == "white":
+                self.turn_no += 1  # Increment turn number
+                self.row = i
+                self.canvas.itemconfig(self.grid_ids[i][col], fill=self.current_player)
+                break
+        #Check for Tie
+        if self.turn_no == 42:
+            self.current_player = "white"
+            self.end_game()
+        # Check for a win after each move
+        if self.checkWin():
+            self.end_game()
 
-  # Choosing tile
-  column =  get_input()
-  turn_no += 1
+    def checkWin(self):
+        # Check all possible win directions
+        return self.horizontal_win() | self.vertical_win() | self.primary_diagonal_win() | self.secondary_diagonal_win()
 
-  # Check for invalid inputs
-  if column > 6 or column < 0 :
-    print("Column does not exist ! ")
-    continue
-  if board[0][column] != ' ' :
-    print("Column Full ! ")
-    continue
+    def horizontal_win(self):
+        # Check horizontally for 4 consecutive pieces
+        for col in range(4):
+            filled = []
+            for i in range(4):
+                filled.append(self.canvas.itemcget(self.grid_ids[self.row][col + i], "fill"))
+            if all(fill == self.current_player for fill in filled):
+                return True
+        return False
 
-  # Input Value and Display board
-  print(*list(range(7)), sep=' _ ')
-  for j in range(5,-1,-1):
-    if board[j][column] == ' ':
-      row = j
-      board[j][column]=symbol
-      break
-  for i in range(6):
-    print(*board[i], sep=' | ')
-    print(' - ' * 9)
-  print(*list(range(7)), sep=' _ ')
+    def vertical_win(self):
+        # Check vertically for 4 consecutive pieces
+        for row in range(3):
+            filled = []
+            for i in range(4):
+                filled.append(self.canvas.itemcget(self.grid_ids[row+i][self.col], "fill"))
+            if all(fill == self.current_player for fill in filled):
+                return True
+        return False
 
+    def primary_diagonal_win(self):
+        # Check diagonally (top-left to bottom-right) for 4 in a row
+        for row in range(3):
+            for col in range(4):
+                filled = []
+                for i in range(4):
+                    filled.append(self.canvas.itemcget(self.grid_ids[row+i][col+i], "fill"))
+                if all(fill == self.current_player for fill in filled):
+                    return True
+        return False
 
-  # Winning Conditions
-  # rows
-  for k in range(4):
-    if board[row][k:k+4] == [symbol for e in range(4)] :
-      print(current_player,'wins !!!')
-      game_over = True
-      break
+    def secondary_diagonal_win(self):
+        # Check diagonally (top-right to bottom-left) for 4 in a row
+        for row in range(3):
+            for col in range(3, 7):
+                filled = []
+                for i in range(4):
+                    filled.append(self.canvas.itemcget(self.grid_ids[row+i][col-i], "fill"))
+                if all(color == self.current_player for color in filled):
+                    return True
+        return False
 
-  # Columns
-  for y in range(3):
-    check = [board[z][column] for z in range(y, y+4)]
-    if check == [symbol for l in range(4)]:
-        print(current_player,'wins !!!')
-        game_over = True
-        break
+    def end_game(self):
+        # Display a dark overlay and winning message
+        self.overlay = self.canvas.create_rectangle(0, 0, 900, 700, fill="black", stipple="gray25", outline="")
+        if self.current_player != "white":
+            self.win_text = self.canvas.create_text(450, 250, text=f"{self.current_player} wins!",fill=self.current_player, font=("Helvetica", 40, "bold"))
+        else:
+            self.win_text = self.canvas.create_text(450, 250, text=f"TIE",fill=self.current_player, font=("Helvetica", 40, "bold"))
+        # Restart button
+        self.restart_btn = tk.Button(self.root, text="Restart", font=("Arial", 16),
+                                     bg="white", fg="black", command=start)
+        self.canvas.create_window(450, 350, window=self.restart_btn)
 
-  # Primary Diagonal (Top Left to Bottom Right)
-  primary_diagonal_check=[]
-  min_index = min(row,column)
-  root_row, root_column = row - min_index, column - min_index
-  for i in range(7):
-    current_row = root_row + i
-    current_column = root_column + i
-    if current_row > 5 or current_column > 6:
-      break
-    primary_diagonal_check.append(board[current_row][current_column])
-  for k in primary_diagonal_check[::-1]:
-    if k ==' ':
-          primary_diagonal_check.remove(' ')
-  if primary_diagonal_check == [symbol for j in range(4)]:
-    print(current_player," wins !!! ")
-    game_over = True
-    break
-  print(primary_diagonal_check)
+# Function to start a new game
+def start():
+    game = Game()
 
-  # Secondary Diagonal (Top Right to Bottom Left)
-  secondary_diagonal_check=[]
-  min_index= min(row,6-column)
-  root_row = row - min_index
-  root_column = column + min_index
-  for i in range (6):
-    current_row = root_row + i
-    current_column = root_column - i
-    if current_row > 5 or current_column < 0 :
-        break
-    secondary_diagonal_check.append(board[current_row][current_column])
-  for k in secondary_diagonal_check:
-    if k ==' ':
-      secondary_diagonal_check.remove(' ')
-  if secondary_diagonal_check == [symbol for j in range(4)]:
-    print(current_player,' wins !!! ')
-    game_over = True
-    break
-
-  # End Game
-  if game_over :
-    break
+# Start the game
+start()
